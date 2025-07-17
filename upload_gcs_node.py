@@ -22,7 +22,7 @@ class UploadImageToGCS:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("public_url",)
     FUNCTION = "upload_to_gcs"
-    CATEGORY = "🍿PapcornsNodes/gcs"
+    CATEGORY = "Papcorns🍿"
     
     def upload_to_gcs(self, image, bucket_name, service_account_path):
         # Create a temporary file to save the image
