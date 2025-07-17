@@ -1,0 +1,10 @@
+# Core dependencies for ComfyUI custom nodes
+torch>=1.9.0
+numpy>=1.21.0
+Pillow>=8.3.0
+
+# Google Cloud Storage dependencies
+google-cloud-storage>=2.0.0
+
+# Optional: Additional dependencies that might be useful
+# torchvision>=0.10.0  # Uncomment if needed for future image processing features 

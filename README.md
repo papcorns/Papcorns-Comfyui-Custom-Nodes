@@ -31,7 +31,7 @@ This package includes the following custom nodes:
 
 2. Install required dependencies:
    ```bash
-   pip install google-cloud-storage pillow
+   pip install -r requirements.txt
    ```
 
 3. Restart ComfyUI
@@ -100,7 +100,7 @@ Bu paket aşağıdaki özel node'ları içerir:
 
 2. Gerekli bağımlılıkları yükleyin:
    ```bash
-   pip install google-cloud-storage pillow
+   pip install -r requirements.txt
    ```
 
 3. ComfyUI'yi yeniden başlatın
