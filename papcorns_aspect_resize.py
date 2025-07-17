@@ -144,12 +144,3 @@ class PapcornsAspectResize:
         
         return result
 
-
-# ComfyUI node mapping
-NODE_CLASS_MAPPINGS = {
-    "PapcornsAspectResize": PapcornsAspectResize
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "PapcornsAspectResize": "Papcorns - Aspect Resize"
-} 
