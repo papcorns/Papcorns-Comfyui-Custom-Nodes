@@ -17,7 +17,7 @@ This package includes the following custom nodes:
 - **Padding Options**: Black or white padding for aspect fit mode
 
 #### 2. **Upload Image To GCS**
-- **Category**: `🍿PapcornsNodes/gcs`
+- **Category**: `Papcorns🍿`
 - **Description**: Upload images directly to Google Cloud Storage from ComfyUI
 - **Features**: Automatic file naming, public URL generation, error handling
 
@@ -86,7 +86,7 @@ Bu paket aşağıdaki özel node'ları içerir:
 - **Dolgu Seçenekleri**: Aspect fit modu için siyah veya beyaz dolgu
 
 #### 2. **Upload Image To GCS**
-- **Kategori**: `🍿PapcornsNodes/gcs`
+- **Kategori**: `Papcorns🍿`
 - **Açıklama**: ComfyUI'den doğrudan Google Cloud Storage'a görüntü yükleme
 - **Özellikler**: Otomatik dosya adlandırma, genel URL oluşturma, hata yönetimi
 
