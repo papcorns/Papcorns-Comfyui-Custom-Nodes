@@ -6,12 +6,97 @@ Trims audio files to specified duration and start time
 
 import os
 import tempfile
+import io
+import numpy as np
 from pydub import AudioSegment
 
 
 class PapcornsAudioTrimmer:
     """
-    ComfyUI node for trimming audio files.
+    ComfyUI node for trimming audio data directly in memory.
+    Takes audio input and returns trimmed audio without file operations.
+    """
+    
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "audio": ("AUDIO",),
+                "start_time_ms": ("INT", {"default": 0, "min": 0, "max": 3600000, "step": 100}),
+                "duration_ms": ("INT", {"default": 7000, "min": 100, "max": 3600000, "step": 100}),
+            }
+        }
+    
+    RETURN_TYPES = ("AUDIO",)
+    RETURN_NAMES = ("audio",)
+    FUNCTION = "trim_audio"
+    CATEGORY = "Papcorns🍿"
+    
+    def trim_audio(self, audio, start_time_ms, duration_ms):
+        """
+        Trim the audio data to specified duration and start time.
+        
+        Args:
+            audio: Input audio data
+            start_time_ms: Start time in milliseconds
+            duration_ms: Duration to trim in milliseconds
+            
+        Returns:
+            Trimmed audio data
+        """
+        try:
+            # Extract audio data and sample rate from ComfyUI audio format
+            # ComfyUI audio format: {"waveform": tensor, "sample_rate": int}
+            waveform = audio["waveform"]
+            sample_rate = audio["sample_rate"]
+            
+            # Convert tensor to numpy array for processing
+            audio_array = waveform.cpu().numpy()
+            
+            # Calculate sample indices for trimming
+            start_sample = int((start_time_ms / 1000.0) * sample_rate)
+            duration_samples = int((duration_ms / 1000.0) * sample_rate)
+            end_sample = min(start_sample + duration_samples, audio_array.shape[-1])
+            
+            # Validate start time
+            if start_sample >= audio_array.shape[-1]:
+                print(f"Warning: Start time ({start_time_ms}ms) exceeds audio duration")
+                start_sample = 0
+                end_sample = min(duration_samples, audio_array.shape[-1])
+            
+            # Trim the audio array
+            if len(audio_array.shape) == 2:  # Stereo
+                trimmed_array = audio_array[:, start_sample:end_sample]
+            else:  # Mono or batch
+                trimmed_array = audio_array[start_sample:end_sample]
+            
+            # Convert back to tensor
+            import torch
+            trimmed_tensor = torch.from_numpy(trimmed_array)
+            
+            # Return in ComfyUI audio format
+            result_audio = {
+                "waveform": trimmed_tensor,
+                "sample_rate": sample_rate
+            }
+            
+            original_duration_ms = (audio_array.shape[-1] / sample_rate) * 1000
+            trimmed_duration_ms = (trimmed_array.shape[-1] / sample_rate) * 1000
+            
+            print(f"Audio trimmed successfully in memory")
+            print(f"Original duration: {original_duration_ms:.0f}ms, Trimmed duration: {trimmed_duration_ms:.0f}ms")
+            
+            return (result_audio,)
+            
+        except Exception as e:
+            print(f"Error processing audio: {str(e)}")
+            # Return original audio on error
+            return (audio,)
+
+
+class PapcornsAudioTrimAndSave:
+    """
+    ComfyUI node for trimming audio files and saving to disk.
     Supports various audio formats and configurable start time and duration.
     """
     
