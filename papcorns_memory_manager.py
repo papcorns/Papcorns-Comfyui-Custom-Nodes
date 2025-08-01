@@ -48,17 +48,26 @@ class PapcornsMemoryManager:
             A tuple containing the passthrough image and status message.
         """
         # Get RAM usage
-        ram_usage_percent = psutil.virtual_memory().percent
+        ram_info = psutil.virtual_memory()
+        ram_usage_percent = ram_info.percent
+        ram_total_gb = ram_info.total / (1024**3)
+        ram_used_gb = ram_info.used / (1024**3)
         
         # Get VRAM usage if CUDA is available
         vram_usage_percent = 0
+        vram_total_gb = 0
+        vram_used_gb = 0
         if torch.cuda.is_available():
             vram_total = comfy.model_management.get_total_memory()
             vram_free, _ = torch.cuda.mem_get_info()
             vram_used = vram_total - vram_free
+            vram_total_gb = vram_total / (1024**3)
+            vram_used_gb = vram_used / (1024**3)
             vram_usage_percent = (vram_used / vram_total) * 100 if vram_total > 0 else 0
         
-        status_message = f"RAM Usage: {ram_usage_percent:.1f}% | VRAM Usage: {vram_usage_percent:.1f}%"
+        status_message = f"RAM: {ram_used_gb:.1f}/{ram_total_gb:.1f}GB ({ram_usage_percent:.1f}%) | VRAM: {vram_used_gb:.1f}/{vram_total_gb:.1f}GB ({vram_usage_percent:.1f}%)"
+        
+        print(f"🍿|MEMORY| Before - RAM: {ram_used_gb:.1f}/{ram_total_gb:.1f}GB ({ram_usage_percent:.1f}%) | VRAM: {vram_used_gb:.1f}/{vram_total_gb:.1f}GB ({vram_usage_percent:.1f}%)")
         
         ram_exceeded = ram_usage_percent > ram_threshold
         vram_exceeded = vram_usage_percent > vram_threshold
@@ -81,13 +90,30 @@ class PapcornsMemoryManager:
             if actions_taken:
                 action_str = " and ".join(actions_taken)
                 print(f"🍿|MEMORY| {action_str}.")
+                
+                # Check memory after cleaning
+                ram_info_after = psutil.virtual_memory()
+                ram_used_gb_after = ram_info_after.used / (1024**3)
+                ram_usage_percent_after = ram_info_after.percent
+                
+                vram_used_gb_after = 0
+                vram_usage_percent_after = 0
+                if torch.cuda.is_available():
+                    vram_free_after, _ = torch.cuda.mem_get_info()
+                    vram_used_after = vram_total - vram_free_after
+                    vram_used_gb_after = vram_used_after / (1024**3)
+                    vram_usage_percent_after = (vram_used_after / vram_total) * 100 if vram_total > 0 else 0
+                
+                print(f"🍿|MEMORY| After - RAM: {ram_used_gb_after:.1f}/{ram_total_gb:.1f}GB ({ram_usage_percent_after:.1f}%) | VRAM: {vram_used_gb_after:.1f}/{vram_total_gb:.1f}GB ({vram_usage_percent_after:.1f}%)")
+                
                 status_message += "\nActions: " + ", ".join(actions_taken) + "."
         else:
             status_message += "\nMemory usage is within thresholds. No action taken."
             print("🍿|MEMORY| Model exists and cache is not cleared.")
             
         if model_names:
-            status_message += f"\nModel names: {model_names}"
+            model_names_list = [name.strip() for name in model_names.split(", ") if name.strip()]
+            status_message += f"\nModel names ({len(model_names_list)}): {', '.join(model_names_list)}"
             
         return (image, status_message,)
 
