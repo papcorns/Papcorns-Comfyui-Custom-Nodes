@@ -18,30 +18,34 @@ class PapcornsMemoryManager:
     def INPUT_TYPES(cls):
         return {
             "required": {
+                "image": ("IMAGE",),
                 "ram_threshold": ("INT", {"default": 70, "min": 0, "max": 100, "step": 1}),
                 "vram_threshold": ("INT", {"default": 70, "min": 0, "max": 100, "step": 1}),
                 "clear_models_on_exceed": ("BOOLEAN", {"default": True}),
                 "clear_cache_on_exceed": ("BOOLEAN", {"default": True}),
+                "model_names": ("STRING", {"default": ""}),
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("status",)
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("image", "status",)
     FUNCTION = "manage_memory"
     CATEGORY = "Papcorns🍿"
 
-    def manage_memory(self, ram_threshold, vram_threshold, clear_models_on_exceed, clear_cache_on_exceed):
+    def manage_memory(self, image, ram_threshold, vram_threshold, clear_models_on_exceed, clear_cache_on_exceed, model_names):
         """
         Checks memory usage and clears caches if thresholds are exceeded.
         
         Args:
+            image: Input image to pass through
             ram_threshold (int): The RAM usage percentage threshold.
             vram_threshold (int): The VRAM usage percentage threshold.
             clear_models_on_exceed (bool): Whether to unload all models from VRAM.
             clear_cache_on_exceed (bool): Whether to empty the PyTorch cache.
+            model_names (str): String containing model names for reference.
             
         Returns:
-            A string containing a status message of the operations performed.
+            A tuple containing the passthrough image and status message.
         """
         # Get RAM usage
         ram_usage_percent = psutil.virtual_memory().percent
@@ -75,9 +79,15 @@ class PapcornsMemoryManager:
                 actions_taken.append("Cleared cache")
             
             if actions_taken:
+                action_str = " and ".join(actions_taken)
+                print(f"🍿|MEMORY| {action_str}.")
                 status_message += "\nActions: " + ", ".join(actions_taken) + "."
         else:
             status_message += "\nMemory usage is within thresholds. No action taken."
+            print("🍿|MEMORY| Model exists and cache is not cleared.")
             
-        return (status_message,)
+        if model_names:
+            status_message += f"\nModel names: {model_names}"
+            
+        return (image, status_message,)
 

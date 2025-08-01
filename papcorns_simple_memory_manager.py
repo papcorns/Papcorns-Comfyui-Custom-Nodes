@@ -17,25 +17,31 @@ class PapcornsSimpleMemoryManager:
     @classmethod
     def INPUT_TYPES(cls):
         return {
+            "required": {
+                "image": ("IMAGE",),
+                "model_names": ("STRING", {"default": ""}),
+            },
             "optional": {
                 "model": ("MODEL",),
             }
         }
 
-    RETURN_TYPES = ("STRING",)
-    RETURN_NAMES = ("status",)
+    RETURN_TYPES = ("IMAGE", "STRING",)
+    RETURN_NAMES = ("image", "status",)
     FUNCTION = "simple_memory_check"
     CATEGORY = "Papcorns🍿"
 
-    def simple_memory_check(self, model=None):
+    def simple_memory_check(self, image, model_names, model=None):
         """
         Simple memory management: clear cache only if no model is provided.
         
         Args:
+            image: Input image to pass through
+            model_names (str): String containing model names for reference
             model: Optional model input
             
         Returns:
-            A string containing a status message of the operations performed.
+            A tuple containing the passthrough image and status message.
         """
         if model is not None:
             # Model exists, don't clear cache
@@ -56,4 +62,7 @@ class PapcornsSimpleMemoryManager:
             print("🍿|MEMORY| Cache cleared - no model detected.")
             status_message += "\nActions: Unloaded all models, cleared cache."
             
-        return (status_message,)
+        if model_names:
+            status_message += f"\nModel names: {model_names}"
+            
+        return (image, status_message,)
