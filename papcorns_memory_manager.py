@@ -73,6 +73,15 @@ class PapcornsMemoryManager:
         vram_exceeded = vram_usage_percent > vram_threshold
         
         if ram_exceeded or vram_exceeded:
+            # Safety check: Don't clear if RAM is critically high
+            if ram_usage_percent > 90:
+                status_message += f"\nWARNING: RAM critically high ({ram_usage_percent:.1f}%). Skipping cleanup to prevent OOM."
+                print("🍿|MEMORY| WARNING: RAM critically high, skipping cleanup to prevent system crash.")
+                if model_names:
+                    model_names_list = [name.strip() for name in model_names.split(", ") if name.strip()]
+                    status_message += f"\nModel names ({len(model_names_list)}): {', '.join(model_names_list)}"
+                return (image, status_message,)
+            
             actions_taken = []
             if ram_exceeded:
                 status_message += f"\n- RAM threshold exceeded ({ram_threshold}%)"
@@ -80,11 +89,27 @@ class PapcornsMemoryManager:
                 status_message += f"\n- VRAM threshold exceeded ({vram_threshold}%)"
 
             if clear_models_on_exceed:
+                # Clear RAM first to prevent OOM when clearing VRAM
+                import gc
+                gc.collect()  # Python garbage collection
+                actions_taken.append("Cleared RAM")
+                
+                # Then safely unload models
                 comfy.model_management.unload_all_models()
                 actions_taken.append("Unloaded all models")
                 
             if clear_cache_on_exceed:
+                # Clear RAM again before VRAM operations
+                import gc
+                if "Cleared RAM" not in actions_taken:
+                    gc.collect()
+                    actions_taken.append("Cleared RAM")
+                
+                # Clear VRAM carefully
                 comfy.model_management.soft_empty_cache()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()  # Wait for operations to complete
                 actions_taken.append("Cleared cache")
             
             if actions_taken:

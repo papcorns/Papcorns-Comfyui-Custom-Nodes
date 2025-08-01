@@ -61,16 +61,37 @@ class PapcornsSimpleMemoryManager:
         print(f"🍿|MEMORY| Before - RAM: {ram_used_gb:.1f}/{ram_total_gb:.1f}GB ({ram_usage_percent:.1f}%) | VRAM: {vram_used_gb:.1f}/{vram_total_gb:.1f}GB ({vram_usage_percent:.1f}%)")
         
         if clear_cache:
-            # Clear all cache
-            status_message = "Clearing all memory cache."
+            # Check if RAM is dangerously high before proceeding
+            if ram_usage_percent > 85:
+                status_message = "RAM usage too high (>85%). Skipping cache clear to prevent OOM."
+                print("🍿|MEMORY| WARNING: RAM usage too high, skipping cache clear to prevent OOM.")
+                if model_names:
+                    model_names_list = [name.strip() for name in model_names.split(", ") if name.strip()]
+                    status_message += f"\nModel names ({len(model_names_list)}): {', '.join(model_names_list)}"
+                return (image, status_message,)
             
-            # Clear models and cache
+            # Safe clearing process
+            status_message = "Clearing all memory cache safely."
+            
+            # Step 1: Clear RAM first to make space
+            import gc
+            gc.collect()  # Python garbage collection
+            print("🍿|MEMORY| Step 1: RAM cleared")
+            
+            # Step 2: Unload models carefully
             comfy.model_management.unload_all_models()
-            comfy.model_management.soft_empty_cache()
+            print("🍿|MEMORY| Step 2: Models unloaded")
             
-            # Also clear PyTorch cache if CUDA is available
+            # Step 3: Clear RAM again after model unloading
+            gc.collect()
+            print("🍿|MEMORY| Step 3: RAM cleared again")
+            
+            # Step 4: Clear VRAM caches
+            comfy.model_management.soft_empty_cache()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                torch.cuda.synchronize()  # Wait for operations to complete
+            print("🍿|MEMORY| Step 4: VRAM cache cleared")
             
             # Check memory after cleaning
             ram_info_after = psutil.virtual_memory()
