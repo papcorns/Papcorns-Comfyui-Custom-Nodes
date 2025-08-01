@@ -89,27 +89,37 @@ class PapcornsMemoryManager:
                 status_message += f"\n- VRAM threshold exceeded ({vram_threshold}%)"
 
             if clear_models_on_exceed:
-                # Clear RAM first to prevent OOM when clearing VRAM
+                # Aggressive RAM clearing before model operations
                 import gc
-                gc.collect()  # Python garbage collection
+                gc.collect()
                 actions_taken.append("Cleared RAM")
                 
-                # Then safely unload models
+                # Unload models with immediate RAM cleanup
                 comfy.model_management.unload_all_models()
+                gc.collect()  # Immediate cleanup after model unload
                 actions_taken.append("Unloaded all models")
                 
             if clear_cache_on_exceed:
-                # Clear RAM again before VRAM operations
+                # Ensure RAM is clean before VRAM operations
                 import gc
-                if "Cleared RAM" not in actions_taken:
-                    gc.collect()
-                    actions_taken.append("Cleared RAM")
+                gc.collect()
                 
-                # Clear VRAM carefully
-                comfy.model_management.soft_empty_cache()
+                # Clear VRAM in small chunks with immediate RAM cleanup
                 if torch.cuda.is_available():
+                    # Direct CUDA cache clearing (more aggressive)
                     torch.cuda.empty_cache()
-                    torch.cuda.synchronize()  # Wait for operations to complete
+                    gc.collect()  # Clean RAM immediately after VRAM clear
+                    torch.cuda.synchronize()
+                    gc.collect()  # Clean RAM again after sync
+                
+                # ComfyUI cache clearing with immediate cleanup
+                comfy.model_management.soft_empty_cache()
+                gc.collect()  # Clean RAM immediately
+                
+                # Final aggressive RAM cleanup
+                for _ in range(3):  # Multiple passes to ensure cleanup
+                    gc.collect()
+                
                 actions_taken.append("Cleared cache")
             
             if actions_taken:
