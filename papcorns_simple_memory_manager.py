@@ -70,49 +70,67 @@ class PapcornsSimpleMemoryManager:
                     status_message += f"\nModel names ({len(model_names_list)}): {', '.join(model_names_list)}"
                 return (image, status_message,)
             
-            # Production-safe clearing process (prevent RAM spikes)
-            status_message = "Clearing memory cache (production-safe)."
+            # Production RAM-first clearing process
+            status_message = "Clearing memory (RAM-first approach)."
             
-            # Step 1: Initial RAM cleanup
+            # Step 1: AGGRESSIVE RAM cleaning FIRST - create maximum free space
             import gc
-            gc.collect()
-            print("🍿|MEMORY| Step 1: Initial RAM cleanup")
+            import ctypes
             
-            # Check RAM after initial cleanup
-            ram_check = psutil.virtual_memory()
-            ram_before_models = ram_check.used / (1024**3)
+            print("🍿|MEMORY| Step 1: Aggressive RAM cleanup (multiple passes)")
             
-            # Step 2: Unload models with immediate RAM cleanup
-            comfy.model_management.unload_all_models()
-            gc.collect()  # Immediate cleanup
-            print("🍿|MEMORY| Step 2: Models unloaded + RAM cleaned")
-            
-            # Step 3: Aggressive VRAM clearing with RAM monitoring
-            if torch.cuda.is_available():
-                # Monitor RAM before VRAM operations
-                ram_before_vram = psutil.virtual_memory().used / (1024**3)
-                
-                # Clear VRAM in phases with immediate RAM cleanup
-                torch.cuda.empty_cache()
-                gc.collect()  # Clean immediately
-                
-                torch.cuda.synchronize()
-                gc.collect()  # Clean after sync
-                
-                # Check if RAM spiked and clean aggressively if needed
-                ram_after_vram = psutil.virtual_memory().used / (1024**3)
-                if ram_after_vram > ram_before_vram + 2:  # If RAM increased by >2GB
-                    for _ in range(5):  # Aggressive cleanup
-                        gc.collect()
-                    print("🍿|MEMORY| Step 3a: VRAM cleared + aggressive RAM cleanup")
-                else:
-                    print("🍿|MEMORY| Step 3: VRAM cleared safely")
-            
-            # Step 4: ComfyUI cache with immediate cleanup
-            comfy.model_management.soft_empty_cache()
-            for _ in range(3):  # Multiple cleanup passes
+            # Multiple aggressive RAM cleanup passes
+            for i in range(10):  # 10 passes to ensure everything is cleaned
                 gc.collect()
-            print("🍿|MEMORY| Step 4: ComfyUI cache cleared + final cleanup")
+                
+            # Force Python to release memory back to system (Linux/Unix)
+            try:
+                import os
+                if hasattr(os, 'sync'):
+                    os.sync()  # Force write to disk
+            except:
+                pass
+                
+            # Check RAM after aggressive cleanup
+            ram_after_cleanup = psutil.virtual_memory()
+            ram_cleaned_gb = ram_after_cleanup.used / (1024**3)
+            print(f"🍿|MEMORY| Step 1 complete: RAM now at {ram_cleaned_gb:.1f}GB")
+            
+            # Step 2: Clear Python objects and ComfyUI caches BEFORE touching VRAM
+            print("🍿|MEMORY| Step 2: Clear ComfyUI caches (no VRAM yet)")
+            comfy.model_management.soft_empty_cache()
+            
+            # More aggressive RAM cleanup after ComfyUI cache clear
+            for _ in range(5):
+                gc.collect()
+                
+            ram_after_comfy = psutil.virtual_memory().used / (1024**3)
+            print(f"🍿|MEMORY| Step 2 complete: RAM now at {ram_after_comfy:.1f}GB")
+            
+            # Step 3: Unload models (still no VRAM operations)
+            print("🍿|MEMORY| Step 3: Unload models from memory")
+            comfy.model_management.unload_all_models()
+            
+            # Aggressive cleanup after model unload
+            for _ in range(10):
+                gc.collect()
+                
+            ram_after_models = psutil.virtual_memory().used / (1024**3)
+            print(f"🍿|MEMORY| Step 3 complete: RAM now at {ram_after_models:.1f}GB")
+            
+            # Step 4: ONLY NOW clear VRAM (after RAM is maximally free)
+            if torch.cuda.is_available():
+                print("🍿|MEMORY| Step 4: Clear VRAM (RAM should be free now)")
+                
+                # Quick VRAM clear with immediate cleanup
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+                
+                # Immediate aggressive RAM cleanup after VRAM clear
+                for _ in range(15):  # Extra aggressive after VRAM
+                    gc.collect()
+                    
+                print("🍿|MEMORY| Step 4 complete: VRAM cleared + RAM cleaned")
             
             # Check memory after cleaning
             ram_info_after = psutil.virtual_memory()
