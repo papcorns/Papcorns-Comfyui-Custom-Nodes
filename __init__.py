@@ -7,6 +7,7 @@ from .papcorns_aspect_resize import PapcornsAspectResize
 from .upload_gcs_node import UploadImageToGCS
 from .papcorns_audio_trimmer import PapcornsAudioTrimmer, PapcornsAudioTrimAndSave
 from .papcorns_memory_manager import PapcornsMemoryManager
+from .papcorns_simple_memory_manager import PapcornsSimpleMemoryManager
 
 # Export the node class mappings required by ComfyUI
 NODE_CLASS_MAPPINGS = {
@@ -14,7 +15,8 @@ NODE_CLASS_MAPPINGS = {
     "UploadImageToGCS": UploadImageToGCS,
     "PapcornsAudioTrimmer": PapcornsAudioTrimmer,
     "PapcornsAudioTrimAndSave": PapcornsAudioTrimAndSave,
-    "PapcornsMemoryManager": PapcornsMemoryManager
+    "PapcornsMemoryManager": PapcornsMemoryManager,
+    "PapcornsSimpleMemoryManager": PapcornsSimpleMemoryManager
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -22,7 +24,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "UploadImageToGCS": "Upload Image To GCS",
     "PapcornsAudioTrimmer": "Papcorns - Audio Trimmer",
     "PapcornsAudioTrimAndSave": "Papcorns - Audio Trim & Save",
-    "PapcornsMemoryManager": "Papcorns - Memory Manager"
+    "PapcornsMemoryManager": "Papcorns - Memory Manager",
+    "PapcornsSimpleMemoryManager": "Papcorns - Simple Memory Manager"
 }
 
 # Define what gets imported when using "from package import *"
@@ -32,6 +35,7 @@ __all__ = [
     "PapcornsAudioTrimmer",
     "PapcornsAudioTrimAndSave",
     "PapcornsMemoryManager",
+    "PapcornsSimpleMemoryManager",
     "NODE_CLASS_MAPPINGS", 
     "NODE_DISPLAY_NAME_MAPPINGS"
 ] 
