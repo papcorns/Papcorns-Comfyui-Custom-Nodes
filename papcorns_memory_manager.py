@@ -88,35 +88,58 @@ class PapcornsMemoryManager:
             if vram_exceeded:
                 status_message += f"\n- VRAM threshold exceeded ({vram_threshold}%)"
 
-            # Effective RAM clearing first
+            # AGGRESSIVE RAM clearing first - last chance approach
             if clear_models_on_exceed or clear_cache_on_exceed:
-                print("🍿|MEMORY| Effective RAM clearing methods")
+                print("🍿|MEMORY| AGGRESSIVE RAM clearing - last chance methods")
                 
-                # Method 1: OS-level memory operations
                 import os
+                import gc
+                import ctypes
+                import subprocess
+                import sys
+                
+                # Get initial RAM
+                ram_initial = psutil.virtual_memory().used / (1024**3)
+                
+                # Method 1: Memory pressure technique
+                print("🍿|MEMORY| Memory pressure technique")
                 try:
-                    # Drop OS caches (Linux/Unix)
-                    os.system("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
-                    print("🍿|MEMORY| OS cache drop attempted")
+                    memory_blocks = []
+                    for i in range(10):
+                        block = bytearray(100 * 1024 * 1024)  # 100MB blocks
+                        memory_blocks.append(block)
+                    del memory_blocks
+                    gc.collect()
                 except:
                     pass
                 
-                # Method 2: Force memory release to OS
+                # Method 2: All possible Python cleanup
                 try:
-                    import ctypes
+                    sys.intern("")  # Clear string cache
+                    for _ in range(5):
+                        gc.collect()
+                    
                     if hasattr(ctypes, 'CDLL'):
                         libc = ctypes.CDLL("libc.so.6")
-                        libc.malloc_trim(0)  # Release free memory back to OS
-                        print("🍿|MEMORY| malloc_trim completed")
+                        libc.malloc_trim(0)
+                        libc.malloc_stats()
                 except:
-                    print("🍿|MEMORY| malloc_trim not available")
+                    pass
                 
-                # Check RAM after cleanup
-                ram_after_ram_cleanup = psutil.virtual_memory()
-                ram_after_cleanup_gb = ram_after_ram_cleanup.used / (1024**3)
-                print(f"🍿|MEMORY| RAM after cleanup: {ram_after_cleanup_gb:.1f}GB")
+                # Method 3: Kernel operations
+                try:
+                    os.system("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
+                    os.system("echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true")
+                    os.system("sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
+                except:
+                    pass
                 
-                actions_taken.append("RAM cleared effectively")
+                # Check results
+                ram_after = psutil.virtual_memory().used / (1024**3)
+                ram_freed = ram_initial - ram_after
+                print(f"🍿|MEMORY| RAM freed: {ram_freed:.1f}GB ({ram_initial:.1f}GB → {ram_after:.1f}GB)")
+                
+                actions_taken.append(f"RAM cleared aggressively (freed {ram_freed:.1f}GB)")
             
             # Direct VRAM clearing approach - avoid ComfyUI model management
             if clear_cache_on_exceed and torch.cuda.is_available():

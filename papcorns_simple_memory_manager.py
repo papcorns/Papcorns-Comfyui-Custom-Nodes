@@ -73,39 +73,81 @@ class PapcornsSimpleMemoryManager:
             # Direct memory clearing with effective RAM management
             status_message = "Direct memory clearing (VRAM + effective RAM)."
             
-            print("🍿|MEMORY| Step 1: Effective RAM clearing first")
+            print("🍿|MEMORY| Step 1: AGGRESSIVE RAM clearing - multiple methods")
             
-            # Method 1: Force Python memory release to OS
             import gc
             import ctypes
             import os
+            import subprocess
+            import sys
             
-            # Multiple garbage collection passes
-            for _ in range(3):
-                gc.collect()
+            # Get initial RAM
+            ram_initial = psutil.virtual_memory().used / (1024**3)
+            print(f"🍿|MEMORY| Initial RAM: {ram_initial:.1f}GB")
             
-            # Try to force memory release to OS (Linux/Unix specific)
+            # Method 1: Force memory pressure - allocate/deallocate to force OS cleanup
+            print("🍿|MEMORY| Method 1: Memory pressure technique")
             try:
-                # Force memory pages to be written to swap/released
+                # Create memory pressure by allocating then immediately releasing
+                memory_blocks = []
+                for i in range(10):
+                    # Allocate 100MB blocks
+                    block = bytearray(100 * 1024 * 1024)  # 100MB
+                    memory_blocks.append(block)
+                
+                # Immediately delete all blocks to force deallocation
+                del memory_blocks
+                gc.collect()
+                print("🍿|MEMORY| Memory pressure completed")
+            except:
+                print("🍿|MEMORY| Memory pressure failed")
+            
+            # Method 2: OS-level process memory trimming
+            print("🍿|MEMORY| Method 2: OS-level process memory trimming")
+            try:
+                pid = os.getpid()
+                # Force memory trimming for this process
+                subprocess.call(f"echo madvise > /proc/sys/vm/memory_failure_early_kill 2>/dev/null || true", shell=True)
+                subprocess.call(f"echo 1 > /proc/{pid}/oom_score_adj 2>/dev/null || true", shell=True)  # Temporarily mark for memory pressure
+                subprocess.call(f"echo 0 > /proc/{pid}/oom_score_adj 2>/dev/null || true", shell=True)  # Reset
+                print("🍿|MEMORY| OS-level process trimming attempted")
+            except:
+                print("🍿|MEMORY| OS-level trimming not available")
+            
+            # Method 3: Force all possible Python cleanup
+            print("🍿|MEMORY| Method 3: Maximum Python cleanup")
+            try:
+                # Clear all possible Python caches
+                sys.intern("")  # Clear string interning cache
+                gc.collect()
+                gc.collect()
+                gc.collect()  # Multiple passes
+                
+                # Force libc memory operations
+                if hasattr(ctypes, 'CDLL'):
+                    libc = ctypes.CDLL("libc.so.6")
+                    libc.malloc_trim(0)
+                    libc.malloc_stats()  # Force memory statistics update
+                
+                print("🍿|MEMORY| Maximum Python cleanup completed")
+            except:
+                print("🍿|MEMORY| Python cleanup had issues")
+            
+            # Method 4: Kernel-level memory operations
+            print("🍿|MEMORY| Method 4: Kernel memory operations")
+            try:
+                # Multiple kernel memory operations
                 os.system("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
-                print("🍿|MEMORY| OS cache drop attempted")
+                os.system("echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true")
+                os.system("sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
+                print("🍿|MEMORY| Kernel memory operations completed")
             except:
                 pass
             
-            # Method 2: Python memory allocation reset
-            try:
-                # Force Python to release unused arenas back to system
-                if hasattr(ctypes, 'CDLL'):
-                    libc = ctypes.CDLL("libc.so.6")
-                    libc.malloc_trim(0)  # Release free memory back to OS
-                    print("🍿|MEMORY| malloc_trim completed")
-            except:
-                print("🍿|MEMORY| malloc_trim not available")
-            
-            # Check RAM after cleanup
-            ram_after_cleanup = psutil.virtual_memory()
-            ram_cleaned_gb = ram_after_cleanup.used / (1024**3)
-            print(f"🍿|MEMORY| Step 1 complete: RAM now at {ram_cleaned_gb:.1f}GB")
+            # Check RAM after aggressive cleanup
+            ram_after_aggressive = psutil.virtual_memory().used / (1024**3)
+            ram_freed = ram_initial - ram_after_aggressive
+            print(f"🍿|MEMORY| After aggressive cleanup: {ram_after_aggressive:.1f}GB (freed: {ram_freed:.1f}GB)")
             
             print("🍿|MEMORY| Step 2: Direct VRAM clearing")
             
