@@ -70,67 +70,104 @@ class PapcornsSimpleMemoryManager:
                     status_message += f"\nModel names ({len(model_names_list)}): {', '.join(model_names_list)}"
                 return (image, status_message,)
             
-            # Production RAM-first clearing process
-            status_message = "Clearing memory (RAM-first approach)."
+            # Direct memory clearing with effective RAM management
+            status_message = "Direct memory clearing (VRAM + effective RAM)."
             
-            # Step 1: AGGRESSIVE RAM cleaning FIRST - create maximum free space
+            print("🍿|MEMORY| Step 1: Effective RAM clearing first")
+            
+            # Method 1: Force Python memory release to OS
             import gc
             import ctypes
+            import os
             
-            print("🍿|MEMORY| Step 1: Aggressive RAM cleanup (multiple passes)")
-            
-            # Multiple aggressive RAM cleanup passes
-            for i in range(10):  # 10 passes to ensure everything is cleaned
+            # Multiple garbage collection passes
+            for _ in range(3):
                 gc.collect()
-                
-            # Force Python to release memory back to system (Linux/Unix)
+            
+            # Try to force memory release to OS (Linux/Unix specific)
             try:
-                import os
-                if hasattr(os, 'sync'):
-                    os.sync()  # Force write to disk
+                # Force memory pages to be written to swap/released
+                os.system("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
+                print("🍿|MEMORY| OS cache drop attempted")
             except:
                 pass
-                
-            # Check RAM after aggressive cleanup
+            
+            # Method 2: Python memory allocation reset
+            try:
+                # Force Python to release unused arenas back to system
+                if hasattr(ctypes, 'CDLL'):
+                    libc = ctypes.CDLL("libc.so.6")
+                    libc.malloc_trim(0)  # Release free memory back to OS
+                    print("🍿|MEMORY| malloc_trim completed")
+            except:
+                print("🍿|MEMORY| malloc_trim not available")
+            
+            # Check RAM after cleanup
             ram_after_cleanup = psutil.virtual_memory()
             ram_cleaned_gb = ram_after_cleanup.used / (1024**3)
             print(f"🍿|MEMORY| Step 1 complete: RAM now at {ram_cleaned_gb:.1f}GB")
             
-            # Step 2: Clear Python objects and ComfyUI caches BEFORE touching VRAM
-            print("🍿|MEMORY| Step 2: Clear ComfyUI caches (no VRAM yet)")
-            comfy.model_management.soft_empty_cache()
+            print("🍿|MEMORY| Step 2: Direct VRAM clearing")
             
-            # More aggressive RAM cleanup after ComfyUI cache clear
-            for _ in range(5):
-                gc.collect()
-                
-            ram_after_comfy = psutil.virtual_memory().used / (1024**3)
-            print(f"🍿|MEMORY| Step 2 complete: RAM now at {ram_after_comfy:.1f}GB")
-            
-            # Step 3: Unload models (still no VRAM operations)
-            print("🍿|MEMORY| Step 3: Unload models from memory")
-            comfy.model_management.unload_all_models()
-            
-            # Aggressive cleanup after model unload
-            for _ in range(10):
-                gc.collect()
-                
-            ram_after_models = psutil.virtual_memory().used / (1024**3)
-            print(f"🍿|MEMORY| Step 3 complete: RAM now at {ram_after_models:.1f}GB")
-            
-            # Step 4: ONLY NOW clear VRAM (after RAM is maximally free)
             if torch.cuda.is_available():
-                print("🍿|MEMORY| Step 4: Clear VRAM (RAM should be free now)")
+                # Method 1: Direct CUDA memory clearing in small chunks
+                print("🍿|MEMORY| Method 1: Small chunk VRAM clearing")
                 
-                # Quick VRAM clear with immediate cleanup
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
+                # Get current VRAM info
+                vram_free_before, vram_total = torch.cuda.mem_get_info()
+                vram_used_before = vram_total - vram_free_before
                 
-                # Immediate aggressive RAM cleanup after VRAM clear
-                for _ in range(15):  # Extra aggressive after VRAM
-                    gc.collect()
+                # Clear VRAM in multiple small operations instead of one big operation
+                for i in range(5):
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()
+                    # Small pause to prevent system overload
+                    import time
+                    time.sleep(0.1)
                     
-                print("🍿|MEMORY| Step 4 complete: VRAM cleared + RAM cleaned")
+                # Method 2: Force PyTorch to release ALL cached memory
+                print("🍿|MEMORY| Method 2: Force PyTorch memory release")
+                
+                # Set PyTorch memory fraction to minimum then back
+                if hasattr(torch.cuda, 'set_per_process_memory_fraction'):
+                    try:
+                        # Force PyTorch to release memory by setting fraction to minimum
+                        torch.cuda.set_per_process_memory_fraction(0.1, 0)  # 10% only
+                        torch.cuda.empty_cache()
+                        torch.cuda.synchronize()
+                        
+                        # Reset to full memory access
+                        torch.cuda.set_per_process_memory_fraction(1.0, 0)  # Back to 100%
+                        print("🍿|MEMORY| PyTorch memory fraction reset completed")
+                    except:
+                        print("🍿|MEMORY| Memory fraction method not available")
+                
+                # Method 3: Alternative PyTorch memory clearing
+                print("🍿|MEMORY| Method 3: Alternative PyTorch clearing")
+                
+                try:
+                    # Clear all cached memory allocations
+                    if hasattr(torch.cuda, 'reset_max_memory_allocated'):
+                        torch.cuda.reset_max_memory_allocated()
+                    if hasattr(torch.cuda, 'reset_max_memory_cached'):
+                        torch.cuda.reset_max_memory_cached()
+                    
+                    # Final cache clear
+                    torch.cuda.empty_cache()
+                    torch.cuda.synchronize()
+                    
+                    print("🍿|MEMORY| Alternative PyTorch methods completed")
+                except Exception as e:
+                    print(f"🍿|MEMORY| Alternative methods had issues: {str(e)}")
+                
+                # Check final VRAM
+                vram_free_after, _ = torch.cuda.mem_get_info()
+                vram_used_after = vram_total - vram_free_after
+                vram_freed = (vram_used_before - vram_used_after) / (1024**3)
+                
+                print(f"🍿|MEMORY| VRAM freed: {vram_freed:.1f}GB")
+            else:
+                print("🍿|MEMORY| No CUDA available, skipping VRAM operations")
             
             # Check memory after cleaning
             ram_info_after = psutil.virtual_memory()

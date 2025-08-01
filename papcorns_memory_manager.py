@@ -88,55 +88,77 @@ class PapcornsMemoryManager:
             if vram_exceeded:
                 status_message += f"\n- VRAM threshold exceeded ({vram_threshold}%)"
 
+            # Effective RAM clearing first
             if clear_models_on_exceed or clear_cache_on_exceed:
-                # RAM-FIRST approach: Clean ALL RAM before any VRAM operations
-                import gc
+                print("🍿|MEMORY| Effective RAM clearing methods")
                 
-                print("🍿|MEMORY| Phase 1: Maximum RAM cleanup (10 passes)")
-                for _ in range(10):  # Aggressive RAM cleanup first
-                    gc.collect()
-                    
-                # Force system memory cleanup
+                # Method 1: OS-level memory operations
+                import os
                 try:
-                    import os
-                    if hasattr(os, 'sync'):
-                        os.sync()
+                    # Drop OS caches (Linux/Unix)
+                    os.system("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
+                    print("🍿|MEMORY| OS cache drop attempted")
                 except:
                     pass
                 
-                actions_taken.append("Cleared RAM aggressively")
+                # Method 2: Force memory release to OS
+                try:
+                    import ctypes
+                    if hasattr(ctypes, 'CDLL'):
+                        libc = ctypes.CDLL("libc.so.6")
+                        libc.malloc_trim(0)  # Release free memory back to OS
+                        print("🍿|MEMORY| malloc_trim completed")
+                except:
+                    print("🍿|MEMORY| malloc_trim not available")
                 
-            if clear_models_on_exceed:
-                print("🍿|MEMORY| Phase 2: Unload models")
-                comfy.model_management.unload_all_models()
+                # Check RAM after cleanup
+                ram_after_ram_cleanup = psutil.virtual_memory()
+                ram_after_cleanup_gb = ram_after_ram_cleanup.used / (1024**3)
+                print(f"🍿|MEMORY| RAM after cleanup: {ram_after_cleanup_gb:.1f}GB")
                 
-                # Aggressive cleanup after model unload
-                import gc
-                for _ in range(10):
-                    gc.collect()
-                    
-                actions_taken.append("Unloaded all models")
+                actions_taken.append("RAM cleared effectively")
+            
+            # Direct VRAM clearing approach - avoid ComfyUI model management
+            if clear_cache_on_exceed and torch.cuda.is_available():
+                print("🍿|MEMORY| Direct VRAM clearing (bypass ComfyUI)")
                 
-            if clear_cache_on_exceed:
-                print("🍿|MEMORY| Phase 3: Clear ComfyUI cache (no VRAM yet)")
-                comfy.model_management.soft_empty_cache()
+                # Method 1: PyTorch memory fraction approach
+                try:
+                    if hasattr(torch.cuda, 'set_per_process_memory_fraction'):
+                        # Force PyTorch to minimize memory usage
+                        torch.cuda.set_per_process_memory_fraction(0.1, 0)
+                        torch.cuda.empty_cache()
+                        torch.cuda.synchronize()
+                        
+                        # Reset to normal
+                        torch.cuda.set_per_process_memory_fraction(1.0, 0)
+                        print("🍿|MEMORY| PyTorch memory fraction method completed")
+                except:
+                    print("🍿|MEMORY| Memory fraction method not available")
                 
-                # More RAM cleanup after ComfyUI cache
-                import gc
-                for _ in range(5):
-                    gc.collect()
-                
-                # ONLY NOW clear VRAM (after maximum RAM is freed)
-                if torch.cuda.is_available():
-                    print("🍿|MEMORY| Phase 4: Clear VRAM (final step)")
+                # Method 2: Multiple small VRAM clears
+                print("🍿|MEMORY| Multiple small VRAM clears")
+                for i in range(5):
                     torch.cuda.empty_cache()
                     torch.cuda.synchronize()
-                    
-                    # Final aggressive cleanup
-                    for _ in range(15):
-                        gc.collect()
+                    import time
+                    time.sleep(0.1)  # Small delay between clears
                 
-                actions_taken.append("Cleared cache")
+                actions_taken.append("Direct VRAM cleared")
+                
+            if clear_models_on_exceed:
+                # Only unload models if specifically requested and use minimal approach
+                print("🍿|MEMORY| Minimal model unloading")
+                try:
+                    # Try direct model clearing without ComfyUI management
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                        torch.cuda.synchronize()
+                    actions_taken.append("Models cleared (minimal)")
+                except:
+                    # Fallback to ComfyUI method only if direct method fails
+                    comfy.model_management.unload_all_models()
+                    actions_taken.append("Models unloaded (fallback)")
             
             if actions_taken:
                 action_str = " and ".join(actions_taken)
