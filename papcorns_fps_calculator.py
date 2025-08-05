@@ -20,8 +20,8 @@ class PapcornsFpsCalculator:
             }
         }
     
-    RETURN_TYPES = ("INT",)
-    RETURN_NAMES = ("integer",)
+    RETURN_TYPES = ("FLOAT",)
+    RETURN_NAMES = ("FPS",)
     FUNCTION = "calculate_fps"
     CATEGORY = "Papcorns🍿"
     
@@ -34,23 +34,20 @@ class PapcornsFpsCalculator:
             video_length (int): Video length in seconds
             
         Returns:
-            Calculated FPS as integer
+            Calculated FPS as float
         """
         try:
             # Calculate FPS
             fps = frame_count / video_length
             
-            # Round to nearest integer
-            fps_rounded = round(fps)
-            
             # Log the calculation
-            print(f"🍿|FPS| Calculation: {frame_count} frames ÷ {video_length} seconds = {fps:.2f} FPS (rounded: {fps_rounded})")
+            print(f"🍿|FPS| Calculation: {frame_count} frames ÷ {video_length} seconds = {fps:.2f} FPS")
             
-            return (fps_rounded,)
+            return (fps,)
             
         except ZeroDivisionError:
             print("🍿|FPS| Error: Video length cannot be zero")
-            return (0,)
+            return (0.0,)
         except Exception as e:
             print(f"🍿|FPS| Error calculating FPS: {str(e)}")
-            return (0,)
+            return (0.0,)
