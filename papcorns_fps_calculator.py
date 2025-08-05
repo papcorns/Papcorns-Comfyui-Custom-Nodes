@@ -21,7 +21,7 @@ class PapcornsFpsCalculator:
         }
     
     RETURN_TYPES = ("INT",)
-    RETURN_NAMES = ("fps",)
+    RETURN_NAMES = ("integer",)
     FUNCTION = "calculate_fps"
     CATEGORY = "Papcorns🍿"
     
