@@ -152,8 +152,32 @@ class PapcornsAudioTrimAndSave:
             # Calculate end time
             end_time_ms = min(start_time_ms + duration_ms, audio_duration)
             
-            # Trim the audio
+            # Debug logging
+            print(f"🍿|AUDIO| DEBUG: start_time_ms={start_time_ms}, duration_ms={duration_ms}, end_time_ms={end_time_ms}")
+            print(f"🍿|AUDIO| DEBUG: audio_duration={audio_duration}ms")
+            
+            # Trim the audio using pydub slicing (milliseconds)
+            # Method 1: Try direct slicing
             trimmed = audio[start_time_ms:end_time_ms]
+            actual_duration_1 = len(trimmed)
+            
+            # Method 2: Alternative approach - extract specific segment
+            if actual_duration_1 != (end_time_ms - start_time_ms):
+                print(f"🍿|AUDIO| WARNING: Direct slicing failed, trying alternative method")
+                # Try using pydub's built-in methods
+                trimmed = audio[start_time_ms:]  # From start time to end
+                if len(trimmed) > duration_ms:
+                    trimmed = trimmed[:duration_ms]  # Then limit to duration
+                
+            # Verify the trimmed length
+            actual_trimmed_duration = len(trimmed)
+            expected_duration = end_time_ms - start_time_ms
+            print(f"🍿|AUDIO| DEBUG: Expected trimmed duration: {expected_duration}ms")
+            print(f"🍿|AUDIO| DEBUG: Actual trimmed duration: {actual_trimmed_duration}ms")
+            
+            # Final verification
+            if actual_trimmed_duration != expected_duration:
+                print(f"🍿|AUDIO| WARNING: Duration mismatch! Expected {expected_duration}ms, got {actual_trimmed_duration}ms")
             
             # Generate output path
             output_path = f"{output_filename}.{output_format}"
