@@ -58,17 +58,30 @@ class PapcornsAudioTrimmer:
             duration_samples = int((duration_ms / 1000.0) * sample_rate)
             end_sample = min(start_sample + duration_samples, audio_array.shape[-1])
             
+            # Debug logging
+            print(f"🍿|AUDIO| DEBUG: start_time_ms={start_time_ms}, duration_ms={duration_ms}")
+            print(f"🍿|AUDIO| DEBUG: sample_rate={sample_rate}")
+            print(f"🍿|AUDIO| DEBUG: start_sample={start_sample}, duration_samples={duration_samples}, end_sample={end_sample}")
+            print(f"🍿|AUDIO| DEBUG: audio_array.shape={audio_array.shape}")
+            
             # Validate start time
             if start_sample >= audio_array.shape[-1]:
-                print(f"Warning: Start time ({start_time_ms}ms) exceeds audio duration")
+                print(f"🍿|AUDIO| WARNING: Start time ({start_time_ms}ms) exceeds audio duration")
                 start_sample = 0
                 end_sample = min(duration_samples, audio_array.shape[-1])
+                print(f"🍿|AUDIO| DEBUG: Adjusted - start_sample={start_sample}, end_sample={end_sample}")
             
             # Trim the audio array
-            if len(audio_array.shape) == 2:  # Stereo
+            print(f"🍿|AUDIO| DEBUG: Trimming from sample {start_sample} to {end_sample}")
+            if len(audio_array.shape) == 3:  # Batch format [batch, channels, samples]
+                trimmed_array = audio_array[:, :, start_sample:end_sample]
+            elif len(audio_array.shape) == 2:  # Stereo [channels, samples] 
                 trimmed_array = audio_array[:, start_sample:end_sample]
-            else:  # Mono or batch
+            else:  # Mono [samples]
                 trimmed_array = audio_array[start_sample:end_sample]
+                
+            print(f"🍿|AUDIO| DEBUG: trimmed_array.shape={trimmed_array.shape}")
+            print(f"🍿|AUDIO| DEBUG: Original samples: {audio_array.shape[-1]}, Trimmed samples: {trimmed_array.shape[-1]}")
             
             # Convert back to tensor
             import torch
