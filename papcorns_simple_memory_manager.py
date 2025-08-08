@@ -73,13 +73,14 @@ class PapcornsSimpleMemoryManager:
             # Direct memory clearing with effective RAM management
             status_message = "Direct memory clearing (VRAM + effective RAM)."
             
+            
             print("🍿|MEMORY| Step 1: AGGRESSIVE RAM clearing - multiple methods")
             
             import gc
             import ctypes
             import os
-            import subprocess
             import sys
+            import importlib
             
             # Get initial RAM
             ram_initial = psutil.virtual_memory().used / (1024**3)
@@ -102,47 +103,90 @@ class PapcornsSimpleMemoryManager:
             except:
                 print("🍿|MEMORY| Memory pressure failed")
             
-            # Method 2: OS-level process memory trimming
-            print("🍿|MEMORY| Method 2: OS-level process memory trimming")
+            # Method 2: Kubernetes-friendly memory management
+            print("🍿|MEMORY| Method 2: Container-safe memory management")
             try:
-                pid = os.getpid()
-                # Force memory trimming for this process
-                subprocess.call(f"echo madvise > /proc/sys/vm/memory_failure_early_kill 2>/dev/null || true", shell=True)
-                subprocess.call(f"echo 1 > /proc/{pid}/oom_score_adj 2>/dev/null || true", shell=True)  # Temporarily mark for memory pressure
-                subprocess.call(f"echo 0 > /proc/{pid}/oom_score_adj 2>/dev/null || true", shell=True)  # Reset
-                print("🍿|MEMORY| OS-level process trimming attempted")
-            except:
-                print("🍿|MEMORY| OS-level trimming not available")
-            
-            # Method 3: Force all possible Python cleanup
-            print("🍿|MEMORY| Method 3: Maximum Python cleanup")
-            try:
-                # Clear all possible Python caches
-                sys.intern("")  # Clear string interning cache
-                gc.collect()
-                gc.collect()
-                gc.collect()  # Multiple passes
+                # Use resource limits instead of system calls
+                import resource
                 
-                # Force libc memory operations
-                if hasattr(ctypes, 'CDLL'):
-                    libc = ctypes.CDLL("libc.so.6")
-                    libc.malloc_trim(0)
-                    libc.malloc_stats()  # Force memory statistics update
+                # Get current memory usage
+                current_usage = psutil.Process().memory_info().rss / (1024 * 1024)  # MB
+                print(f"🍿|MEMORY| Current process memory: {current_usage:.1f}MB")
                 
-                print("🍿|MEMORY| Maximum Python cleanup completed")
-            except:
-                print("🍿|MEMORY| Python cleanup had issues")
+                # Force Python memory cleanup without system calls
+                import sys
+                if hasattr(sys, 'intern'):
+                    sys.intern('')  # Clear string intern cache
+                
+                # Multiple garbage collection passes
+                for generation in range(3):
+                    collected = gc.collect(generation)
+                    if collected > 0:
+                        print(f"🍿|MEMORY| GC generation {generation}: collected {collected} objects")
+                
+                print("🍿|MEMORY| Container-safe memory management completed")
+            except Exception as e:
+                print(f"🍿|MEMORY| Container memory management error: {e}")
             
-            # Method 4: Kernel-level memory operations
-            print("🍿|MEMORY| Method 4: Kernel memory operations")
+            # Method 3: Deep Python cleanup (no root required)
+            print("🍿|MEMORY| Method 3: Deep Python cleanup")
             try:
-                # Multiple kernel memory operations
-                os.system("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
-                os.system("echo 1 > /proc/sys/vm/compact_memory 2>/dev/null || true")
-                os.system("sync && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true")
-                print("🍿|MEMORY| Kernel memory operations completed")
-            except:
-                pass
+                # Clear Python internal caches
+                if hasattr(sys, '_clear_type_cache'):
+                    sys._clear_type_cache()
+                    print("🍿|MEMORY| Cleared Python type cache")
+                
+                # Clear import cache (careful approach)
+                import importlib
+                if hasattr(importlib, 'invalidate_caches'):
+                    importlib.invalidate_caches()
+                    print("🍿|MEMORY| Invalidated import caches")
+                
+                # Try malloc_trim only if available (no system dependency)
+                try:
+                    if hasattr(ctypes, 'CDLL'):
+                        # Try different libc paths for different distros
+                        libc_paths = ["libc.so.6", "libc.so", "libc.dylib"]
+                        for path in libc_paths:
+                            try:
+                                libc = ctypes.CDLL(path)
+                                if hasattr(libc, 'malloc_trim'):
+                                    libc.malloc_trim(0)
+                                    print(f"🍿|MEMORY| malloc_trim successful with {path}")
+                                    break
+                            except:
+                                continue
+                except:
+                    print("🍿|MEMORY| malloc_trim not available (normal in containers)")
+                
+                print("🍿|MEMORY| Deep Python cleanup completed")
+            except Exception as e:
+                print(f"🍿|MEMORY| Python cleanup error: {e}")
+            
+            # Method 4: Container-safe memory pressure
+            print("🍿|MEMORY| Method 4: Container-safe memory optimization")
+            try:
+                # Create controlled memory pressure without system calls
+                pressure_blocks = []
+                
+                # Allocate and release memory in pattern to trigger cleanup
+                for i in range(5):
+                    # Smaller blocks for container safety
+                    block = bytearray(50 * 1024 * 1024)  # 50MB blocks
+                    pressure_blocks.append(block)
+                
+                # Release in reverse order to fragment, then cleanup
+                while pressure_blocks:
+                    pressure_blocks.pop()
+                    gc.collect()
+                
+                # Final cleanup
+                del pressure_blocks
+                gc.collect()
+                
+                print("🍿|MEMORY| Container-safe memory optimization completed")
+            except Exception as e:
+                print(f"🍿|MEMORY| Memory optimization error: {e}")
             
             # Check RAM after aggressive cleanup
             ram_after_aggressive = psutil.virtual_memory().used / (1024**3)
