@@ -248,12 +248,12 @@ class PapcornsSimpleMemoryManager:
                 # Method 4: Global variable cleanup
                 try:
                     # Clear global variables that might hold model references
-                    import comfy
+                    import comfy as comfy_module
                     
                     # Try to access and clear common model storage locations
-                    if hasattr(comfy, 'model_management'):
-                        for attr_name in dir(comfy.model_management):
-                            attr = getattr(comfy.model_management, attr_name)
+                    if hasattr(comfy_module, 'model_management'):
+                        for attr_name in dir(comfy_module.model_management):
+                            attr = getattr(comfy_module.model_management, attr_name)
                             if isinstance(attr, (list, dict)) and not attr_name.startswith('_'):
                                 if isinstance(attr, list):
                                     attr.clear()
