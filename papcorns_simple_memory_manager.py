@@ -188,12 +188,51 @@ class PapcornsSimpleMemoryManager:
             except Exception as e:
                 print(f"🍿|MEMORY| Memory optimization error: {e}")
             
-            # Check RAM after aggressive cleanup
-            ram_after_aggressive = psutil.virtual_memory().used / (1024**3)
-            ram_freed = ram_initial - ram_after_aggressive
-            print(f"🍿|MEMORY| After aggressive cleanup: {ram_after_aggressive:.1f}GB (freed: {ram_freed:.1f}GB)")
+            # Check RAM after model clearing
+            ram_after_models = psutil.virtual_memory().used / (1024**3)
+            ram_freed_models = ram_initial - ram_after_models
+            print(f"🍿|MEMORY| After model clearing: {ram_after_models:.1f}GB (freed: {ram_freed_models:.1f}GB)")
             
-            print("🍿|MEMORY| Step 2: Direct VRAM clearing")
+            print("🍿|MEMORY| Step 2: Model offload clearing (RAM-based models)")
+            
+            # Clear models that are offloaded to RAM
+            try:
+                print("🍿|MEMORY| Clearing offloaded models from RAM")
+                
+                # Method 1: ComfyUI model management
+                comfy.model_management.unload_all_models()
+                print("🍿|MEMORY| ComfyUI models unloaded")
+                
+                # Method 2: Force model cleanup from RAM
+                comfy.model_management.cleanup_models()
+                print("🍿|MEMORY| ComfyUI model cleanup completed")
+                
+                # Method 3: Clear model cache
+                if hasattr(comfy.model_management, 'clear_cache'):
+                    comfy.model_management.clear_cache()
+                    print("🍿|MEMORY| ComfyUI cache cleared")
+                
+                # Method 4: Soft empty cache (moves models out of RAM)
+                comfy.model_management.soft_empty_cache()
+                print("🍿|MEMORY| Soft cache empty completed")
+                
+                # Method 5: Force PyTorch model cleanup
+                if hasattr(torch.cuda, 'empty_cache'):
+                    torch.cuda.empty_cache()  # This also affects CPU tensors
+                
+                # Method 6: Clear PyTorch CPU cache
+                if hasattr(torch, 'cpu'):
+                    # Clear CPU tensors that might be holding model data
+                    import threading
+                    if hasattr(torch._C, '_cuda_clearCublasWorkspaces'):
+                        torch._C._cuda_clearCublasWorkspaces()
+                
+                print("🍿|MEMORY| RAM-offloaded models cleared")
+                
+            except Exception as e:
+                print(f"🍿|MEMORY| Model offload clearing error: {e}")
+            
+            print("🍿|MEMORY| Step 3: Direct VRAM clearing")
             
             if torch.cuda.is_available():
                 # Method 1: Direct CUDA memory clearing in small chunks
