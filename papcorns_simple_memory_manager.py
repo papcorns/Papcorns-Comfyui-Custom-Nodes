@@ -195,42 +195,105 @@ class PapcornsSimpleMemoryManager:
             
             print("🍿|MEMORY| Step 2: Model offload clearing (RAM-based models)")
             
-            # Clear models that are offloaded to RAM
+            # Clear models that are offloaded to RAM - AGGRESSIVE APPROACH
             try:
-                print("🍿|MEMORY| Clearing offloaded models from RAM")
+                print("🍿|MEMORY| AGGRESSIVE model clearing from RAM")
                 
-                # Method 1: ComfyUI model management
-                comfy.model_management.unload_all_models()
-                print("🍿|MEMORY| ComfyUI models unloaded")
+                # Method 1: Direct model management access
+                try:
+                    # Access ComfyUI's internal model storage
+                    if hasattr(comfy.model_management, 'current_loaded_models'):
+                        models = comfy.model_management.current_loaded_models
+                        print(f"🍿|MEMORY| Found {len(models) if models else 0} loaded models")
+                        comfy.model_management.current_loaded_models = []
+                        
+                    if hasattr(comfy.model_management, 'models_to_load'):
+                        comfy.model_management.models_to_load = []
+                        
+                    print("🍿|MEMORY| Direct model storage cleared")
+                except Exception as e:
+                    print(f"🍿|MEMORY| Direct model access failed: {e}")
                 
-                # Method 2: Force model cleanup from RAM
-                comfy.model_management.cleanup_models()
-                print("🍿|MEMORY| ComfyUI model cleanup completed")
+                # Method 2: Force unload with memory pressure
+                try:
+                    comfy.model_management.unload_all_models()
+                    comfy.model_management.soft_empty_cache()
+                    
+                    # Create memory pressure to force model release
+                    pressure = bytearray(100 * 1024 * 1024)  # 100MB
+                    del pressure
+                    gc.collect()
+                    
+                    print("🍿|MEMORY| Forced unload with memory pressure")
+                except Exception as e:
+                    print(f"🍿|MEMORY| Forced unload failed: {e}")
                 
-                # Method 3: Clear model cache
-                if hasattr(comfy.model_management, 'clear_cache'):
-                    comfy.model_management.clear_cache()
-                    print("🍿|MEMORY| ComfyUI cache cleared")
-                
-                # Method 4: Soft empty cache (moves models out of RAM)
-                comfy.model_management.soft_empty_cache()
-                print("🍿|MEMORY| Soft cache empty completed")
-                
-                # Method 5: Force PyTorch model cleanup
-                if hasattr(torch.cuda, 'empty_cache'):
-                    torch.cuda.empty_cache()  # This also affects CPU tensors
-                
-                # Method 6: Clear PyTorch CPU cache
-                if hasattr(torch, 'cpu'):
-                    # Clear CPU tensors that might be holding model data
-                    import threading
-                    if hasattr(torch._C, '_cuda_clearCublasWorkspaces'):
+                # Method 3: PyTorch tensor cleanup
+                try:
+                    # Clear all PyTorch CPU tensors
+                    if hasattr(torch._C, '_cuda_emptyCache'):
+                        torch._C._cuda_emptyCache()
+                    
+                    # Clear thread-local storage
+                    if hasattr(torch, '_C') and hasattr(torch._C, '_cuda_clearCublasWorkspaces'):
                         torch._C._cuda_clearCublasWorkspaces()
+                    
+                    # Force CPU tensor cleanup
+                    torch.cuda.empty_cache()  # This affects CPU tensors too
+                    
+                    print("🍿|MEMORY| PyTorch tensor cleanup completed")
+                except Exception as e:
+                    print(f"🍿|MEMORY| PyTorch cleanup failed: {e}")
                 
-                print("🍿|MEMORY| RAM-offloaded models cleared")
+                # Method 4: Global variable cleanup
+                try:
+                    # Clear global variables that might hold model references
+                    import comfy
+                    
+                    # Try to access and clear common model storage locations
+                    if hasattr(comfy, 'model_management'):
+                        for attr_name in dir(comfy.model_management):
+                            attr = getattr(comfy.model_management, attr_name)
+                            if isinstance(attr, (list, dict)) and not attr_name.startswith('_'):
+                                if isinstance(attr, list):
+                                    attr.clear()
+                                elif isinstance(attr, dict):
+                                    attr.clear()
+                                print(f"🍿|MEMORY| Cleared {attr_name}")
+                    
+                    print("🍿|MEMORY| Global variable cleanup completed")
+                except Exception as e:
+                    print(f"🍿|MEMORY| Global cleanup failed: {e}")
+                
+                # Method 5: Module-level cleanup
+                try:
+                    # Clear module caches that might hold model data
+                    import sys
+                    
+                    # Look for modules with model data
+                    model_modules = [name for name in sys.modules.keys() 
+                                   if any(x in name.lower() for x in ['model', 'diffus', 'unet', 'vae', 'clip'])]
+                    
+                    for module_name in model_modules:
+                        try:
+                            module = sys.modules[module_name]
+                            if hasattr(module, '__dict__'):
+                                # Clear large objects from module
+                                for attr_name, attr_value in list(module.__dict__.items()):
+                                    if hasattr(attr_value, 'parameters') or str(type(attr_value)).find('torch') != -1:
+                                        delattr(module, attr_name)
+                                        print(f"🍿|MEMORY| Cleared {module_name}.{attr_name}")
+                        except:
+                            continue
+                    
+                    print("🍿|MEMORY| Module-level cleanup completed")
+                except Exception as e:
+                    print(f"🍿|MEMORY| Module cleanup failed: {e}")
+                
+                print("🍿|MEMORY| AGGRESSIVE model clearing completed")
                 
             except Exception as e:
-                print(f"🍿|MEMORY| Model offload clearing error: {e}")
+                print(f"🍿|MEMORY| Aggressive model clearing error: {e}")
             
             print("🍿|MEMORY| Step 3: Direct VRAM clearing")
             
