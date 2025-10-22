@@ -1,0 +1,37 @@
+[project]
+name = "papcorns-comfyui-custom-nodes"
+description = "A collection of custom nodes for ComfyUI that enhances image processing and cloud storage capabilities."
+version = "1.0.0"
+license = {file = "LICENSE"} 
+# classifiers = [
+#     # For OS-independent nodes (works on all operating systems)
+#     "Operating System :: OS Independent",
+#
+#     # OR for OS-specific nodes, specify the supported systems:
+#     "Operating System :: Microsoft :: Windows",  # Windows specific
+#     "Operating System :: POSIX :: Linux",  # Linux specific
+#     "Operating System :: MacOS",  # macOS specific
+#
+#     # GPU Accelerator support. Pick the ones that are supported by your extension.
+#     "Environment :: GPU :: NVIDIA CUDA",    # NVIDIA CUDA support
+#     "Environment :: GPU :: AMD ROCm",       # AMD ROCm support
+#     "Environment :: GPU :: Intel Arc",      # Intel Arc support
+#     "Environment :: NPU :: Huawei Ascend",  # Huawei Ascend support
+#     "Environment :: GPU :: Apple Metal",    # Apple Metal support
+# ]
+
+dependencies = ["# Core dependencies for ComfyUI custom nodes", "torch>=1.9.0", "numpy>=1.21.0", "Pillow>=8.3.0", "# Google Cloud Storage dependencies", "google-cloud-storage>=2.0.0", "# Audio processing dependencies", "pydub>=0.25.0", "# System utilities", "psutil>=5.9.0", "# Optional: Additional dependencies that might be useful", "# torchvision>=0.10.0  # Uncomment if needed for future image processing features"]
+
+[project.urls]
+Repository = "https://github.com/papcorns/Papcorns-Comfyui-Custom-Nodes"
+#  Used by Comfy Registry https://registry.comfy.org
+Documentation = "https://github.com/papcorns/Papcorns-Comfyui-Custom-Nodes/wiki"
+"Bug Tracker" = "https://github.com/papcorns/Papcorns-Comfyui-Custom-Nodes/issues"
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "Papcorns-Comfyui-Custom-Nodes"
+Icon = ""
+includes = [] 
+# "requires-comfyui" = ">=1.0.0"  # ComfyUI version compatibility
+
